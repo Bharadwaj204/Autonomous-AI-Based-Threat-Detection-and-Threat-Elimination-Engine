@@ -5,96 +5,125 @@
 ![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)
 ![React 18+](https://img.shields.io/badge/React-18+-blue.svg)
 
-> AI-powered threat detection and monitoring system with full-stack architecture.
+**An autonomous cybersecurity defense platform that protects host ecosystems in real-time.** 
 
-**Autonomous AI Based Threat Detection and Threat Elimination Engine** is an advanced, autonomous cybersecurity defense platform designed to protect host ecosystems in real-time. Moving beyond static "anti-virus" signatures, the system continuously monitors bare-metal OS telemetry (CPU, Memory, Packet Rates, File Entropy) to catch zero-day anomalies and live network intrusions as they happen.
-
-It leverages a dual-engine Machine Learning architecture—utilizing a **Random Forest** trained on the massive CIC-IDS2017 dataset for known threats (>99.8% precision) parallel to an **Isolation Forest** targeting unseen behavioral outliers.
-
-If a threat is verified, Autonomous AI Based Threat Detection and Threat Elimination Engine acts with **Level 4 Autonomy**: it terminates malicious processes, blocks network IPs via system firewalls, and safely quarantines high-entropy ransomware files. All actions are logged into a tamper-proof SHA-256 blockchain and streamed over WebSockets to a sleek React UI.
+Unlike traditional "anti-virus" software that relies on outdated, static file signatures, this Engine continuously monitors bare-metal OS telemetry (CPU loads, Memory usage, Network Packet Rates, and File Entropy). It catches zero-day anomalies, ransomware encryption loops, and live network intrusions as they happen, and actively neutralizes them before human intervention is required.
 
 ---
 
-## 🌟 Features
+## 🌟 Core Features
 
-- **Continuous Hardware Monitoring:** Fast `psutil` daemon threads monitor process loads, connection spikes, and packet payloads.
-- **Ransomware Prevention:** Tracks live File I/O creation hashes and calculates Shannon Entropy on disk writes to catch encryption loops in milliseconds.
-- **Dual AI Engine:** High-confidence classifications using Scikit-Learn `RandomForest` mixed with zero-day `IsolationForest` outlier detection.
-- **Autonomous Remediation:** OS-level bindings natively kill attacks and quarantine endpoints without requiring human interaction.
-- **Tamper-Evident Forensics:** Cryptographically bonded JSONL event chains ensure hackers cannot delete or edit security logs once recorded.
-- **Live WebSocket Dashboard:** A beautiful, dark-mode React Dashboard featuring Recharts telemetry plotting.
-
----
-
-## 🏛️ Architecture Overview
-
-The system runs on an asynchronous Python backend wrapped with a modern web dashboard. For a detailed breakdown of the Data Flow, please see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+- **Continuous Hardware Monitoring:** `psutil` daemon threads monitor system processes, connection spikes, and packet payloads natively.
+- **Ransomware Prevention (Zero-Day):** The File IO monitor tracks live file creation and writes. It calculates **Shannon Entropy** to instantly catch the high-entropy encryption loops characteristic of modern ransomware inside milliseconds.
+- **Dual AI Engine:** High-confidence classifications using a Scikit-Learn **Random Forest** (trained on the CIC-IDS2017 dataset with >99.8% precision) operating parallel to an **Isolation Forest** (detecting unseen behavioral outliers).
+- **Autonomous Remediation (Level 4):** OS-level bindings natively kill attack processes, quarantine encrypted files, and block network IPs automatically.
+- **Tamper-Evident Forensics:** Cryptographically bonded JSONL event chains ensure hackers cannot delete, alter, or edit security logs once recorded.
+- **Live WebSocket Dashboard:** A sleek, dark-mode React Dashboard featuring Recharts telemetry plotting.
 
 ---
 
-## 💻 Technology Stack
+## 🏛️ System Architecture Workflow
 
-- **Frontend:** React, TypeScript, Vite, TailwindCSS, Recharts.
-- **Backend API:** Python, FastAPI, Uvicorn, WebSockets.
-- **Machine Learning:** Scikit-Learn (RandomForest, IsolationForest), Pandas, NumPy.
-- **Databases:** SQLite (Threat Intel), JSONL (Forensics).
+The system operates on an active asynchronous pipeline divided into three domains:
+
+1. **Sense (Sensors):** Daemon threads natively wrap around the OS to collect live state.
+2. **Think (AI Inference):** The mathematical pipeline converts the state array (`[cpu, mem, entropy, pkt_rate, bps, connections]`) into normalized matrices and evaluates it against the ML Models.
+3. **Act (OS Actuators):** If a threat confidence boundary is breached, destructive OS commands execute instantly (e.g., firewall blocks, process kills) and the event is written to the unalterable forensic blockchain.
+
+*(For an in-depth component-level design diagram, see `docs/ARCHITECTURE.md`)*
 
 ---
 
-## 🚀 Installation & Setup
+## 💻 Complete Technology Stack
 
-Ensure you have **Python 3.9+** and **Node.js 18+** installed.
+| Layer | Tools & Technologies |
+|-------|----------------------|
+| **Frontend UI** | React, TypeScript, Vite, TailwindCSS, Recharts |
+| **Backend API** | Python, FastAPI, Uvicorn, WebSockets |
+| **Machine Learning**| Scikit-Learn (RandomForest, IsolationForest), Pandas, NumPy |
+| **Databases** | SQLite (Threat Intel IOCs), JSONL (Forensics Blockchain) |
 
-### 1. Clone & Configure
+---
+
+## 🚀 Quick Start & Installation Instructions
+
+Follow these instructions exactly to get the Engine running from scratch on your local machine.
+
+### Prerequisites
+You strictly need the following installed:
+- **Python:** Version 3.9 or higher.
+- **Node.js:** Version 18 or higher (which includes `npm`).
+
+### Step 1: Clone the Repository
+Open a terminal and download the codebase:
 ```bash
-git clone https://github.com/yourusername/autonomous-ai-based-threat-detection-and-threat-elimination-engine.git
-cd autonomous-ai-based-threat-detection-and-threat-elimination-engine
+git clone https://github.com/Bharadwaj204/threat-sentinel-v2.git
+cd "Autonomous AI Based Threat Detection and Threat Elimination Engine"
 ```
 
-*(You can copy `backend/.env.example` to `backend/.env` for explicit model staging secrets if desired).*
+### Step 2: Start the Backend (API + AI Engine)
+The backend requires its own Python environment to load the ML models and launch the system sensors.
 
-### 2. Run Locally
-
-You can run the entire stack simultaneously using the automated launcher script (Windows):
+1. Open a terminal inside the project root and navigate to `backend/`.
+2. Install the rigid Python dependencies:
 ```bash
-./scripts/start-all.bat
-```
-
-**Manual Startup:**
-
-```bash
-# Terminal 1 - Backend
 cd backend
 pip install -r requirements.txt
-python -m uvicorn api.server:app --port 8000
 ```
-
+3. Start the FastAPI server (this binds the sensors and models to memory):
 ```bash
-# Terminal 2 - Frontend
+python -m uvicorn api.server:app --host 0.0.0.0 --port 8000
+```
+> **Note:** Do NOT close this terminal window. The backend is now actively monitoring your computer and serving the API locally.
+
+### Step 3: Start the Frontend (React Dashboard)
+The frontend requires its own Node process to compile the UI.
+
+1. Open a **second** new terminal inside the project root.
+2. Navigate to `frontend/`:
+```bash
 cd frontend
 npm install
+```
+3. Start the Vite React development server:
+```bash
 npm run dev
 ```
 
-Navigate to **[http://localhost:5173](http://localhost:5173)** to access the dashboard.
+### Step 4: Access the Application
+Open your web browser (Chrome/Edge/Firefox) and navigate to:
+👉 **[http://localhost:5173](http://localhost:5173)**
+
+The dashboard should instantly load, displaying live metrics indicating that the WebSockets are successfully streaming hardware telemetry from the backend.
+
+*(Alternatively, Windows users can simply double-click `scripts/start-all.bat` to launch both servers simultaneously in one click).*
 
 ---
 
-## 📖 Usage Guide
+## 🧪 How to Use & Test the Application
 
-When viewing the dashboard, you have full access to:
-- **Live Telemetry:** Watch the AI Engine interpret your hardware traffic streams live.
-- **Simulations:** By clicking "Start Demo" on the **Demo** tab, the platform will simulate 5 heavily encrypted files hitting your storage drive. You can watch the AI instantly catch the entropy spikes and automatically invoke the Quarantine functions.
-- **Audit Logs:** View historical events safely on the **Threats** database view or the **Forensics** blockchain view.
+The Dashboard is broken down into 5 simple tabs. Here is how to use them:
+
+1. **Dashboard:** Watch the live AI Engine interpret your hardware traffic streams in real time as you open apps or browse the web.
+2. **Demo (Testing the AI):** 
+   - Navigate to the **Demo** tab. 
+   - Click the massive **Start Demo** button.
+   - **What happens:** The system safely simulates 5 heavily encrypted "ransomware" files hitting your local storage drive.
+   - **Watch the system react:** The AI will instantly catch the entropy spikes, flash a red alert on your screen, and automatically invoke the native OS Quarantine functions to lock the files away.
+3. **Threats:** View the historical SQLite database of everything the AI caught and what specific action was taken.
+4. **Forensics:** Verify the integrity of your security logs. If a single byte was altered by a hacker, the blockchain validation state will turn red.
+5. **Intel DB:** View the actively hunted "Indicators of Compromise" (Known bad IPs to block).
 
 ---
 
-## 🔮 Future Scope
-- **Dockerization:** Container support for massive scalability and independent sensor deployment.
-- **SIEM Pipeline Output:** Directly output the forensic arrays to Splunk or Elasticsearch.
-- **Stateful Deep Learning:** Swapping the discrete-time Forests for Stateful LSTM neural-network models capable of tracking slow, multi-month APT incursions.
+## 🔮 Future Enhancement Scope
+
+While the Engine is fully functional today, future scale architectures include:
+- **Dockerization:** Complete container support for massive scalability and independent sensor deployment across external VPS boxes.
+- **SIEM Pipeline Output:** Directly outputting the forensic arrays to Splunk or Elasticsearch clusters.
+- **Stateful Deep Learning:** Swapping the discrete-time Forests for Stateful LSTM Neural Networks capable of tracking slow, multi-month APT (Advanced Persistent Threat) incursions.
 
 ---
 
 ## 📄 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This open-source project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
