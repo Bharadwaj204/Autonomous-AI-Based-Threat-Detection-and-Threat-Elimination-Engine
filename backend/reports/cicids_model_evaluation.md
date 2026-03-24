@@ -1,5 +1,5 @@
 # CIC-IDS2017 Model Evaluation Report
-*Generated: 2026-03-16 20:12*
+*Generated: 2026-03-24 18:45*
 
 ---
 
@@ -83,31 +83,30 @@
 
 | Metric | Score |
 |--------|-------|
-| **Accuracy** | 0.9860 (98.60%) |
-| **Precision** | 0.9880 |
-| **Recall** | 0.9839 |
-| **F1 Score** | 0.9860 |
-| **ROC-AUC** | 0.9969 |
+| **Accuracy** | 0.9241 (92.41%) |
+| **Precision** | 0.9187 |
+| **Recall** | 0.9305 |
+| **F1 Score** | 0.9245 |
+| **ROC-AUC** | 0.9412 |
 
 ### Classification Report
 ```
               precision    recall  f1-score   support
 
-      BENIGN       0.98      0.99      0.99     20000
-      ATTACK       0.99      0.98      0.99     20000
+      BENIGN       0.93      0.92      0.92     20000
+      ATTACK       0.92      0.93      0.92     20000
 
-    accuracy                           0.99     40000
-   macro avg       0.99      0.99      0.99     40000
-weighted avg       0.99      0.99      0.99     40000
-
+    accuracy                           0.92     40000
+   macro avg       0.92      0.92      0.92     40000
+weighted avg       0.92      0.92      0.92     40000
 ```
 
 ### Confusion Matrix
 ```
                  Predicted
                  BENIGN   ATTACK
-Actual  BENIGN    19761      239
-        ATTACK      321    19679
+Actual  BENIGN    18354     1646
+        ATTACK     1390    18610
 ```
 
 ### IsolationForest (Unsupervised, standalone)
