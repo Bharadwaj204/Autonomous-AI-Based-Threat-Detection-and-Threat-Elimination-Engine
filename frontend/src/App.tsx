@@ -67,7 +67,8 @@ interface ForensicEntry {
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const rawApi = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API = rawApi.replace(/\/+$/, '');
 const WS_URL = API.replace(/^http/, 'ws') + '/ws';
 const MAX_PTS = 40;
 
