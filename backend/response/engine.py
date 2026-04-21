@@ -31,27 +31,32 @@ PROTECTED_PROCESSES = {
 
 
 class ResponseEngine:
-    def __init__(self, dry_run: bool = False):
+    def __init__(self, safe_mode: bool = True):
         """
-        dry_run=True: log actions but don't actually execute (safe mode)
+        SAFE_MODE=True: log actions but don't actually execute (simulate only)
         """
-        self.dry_run = dry_run
+        from core.policy_engine import PolicyEngine
+        self.SAFE_MODE = safe_mode
+        self.policy = PolicyEngine()
         self.action_log: List[Dict] = []
         os.makedirs(QUARANTINE_DIR, exist_ok=True)
 
     def handle_threat(self, threat: Dict) -> Dict:
         """
-        Dispatch appropriate response based on threat type.
+        Dispatch appropriate response based on threat type and Policy Engine constraints.
         Returns action result dict.
         """
         threat_type = threat.get("type", "unknown")
-        logger.info(f"Handling threat: type={threat_type}, dry_run={self.dry_run}")
+        severity = threat.get("severity", "info")
+        logger.info(f"Handling threat: type={threat_type}, severity={severity}, SAFE_MODE={self.SAFE_MODE}")
+        
+        allowed_actions = self.policy.get_recommended_actions(severity)
 
-        if threat_type in ("file", "simulated_threat"):
+        if threat_type in ("file", "simulated_threat") and "quarantine_file" in allowed_actions:
             return self._quarantine_file(threat)
-        elif threat_type == "process":
+        elif threat_type == "process" and "terminate_process" in allowed_actions:
             return self._terminate_process(threat)
-        elif threat_type == "network":
+        elif threat_type == "network" and "block_ip" in allowed_actions:
             return self._block_network(threat)
         else:
             return self._log_only(threat)
@@ -64,7 +69,7 @@ class ResponseEngine:
             "timestamp": datetime.now().isoformat(),
             "success": False,
             "message": "",
-            "dry_run": self.dry_run
+            "dry_run": self.SAFE_MODE
         }
 
         if not path or not os.path.exists(path):
@@ -72,18 +77,29 @@ class ResponseEngine:
             action["success"] = True  # Treat as success since file is gone
             return action
 
+        if not self.policy.evaluate_action_safety("quarantine_file", path):
+            action["message"] = f"Policy Engine blocked quarantine of critical path: {path}"
+            action["success"] = False
+            self._log_action(action)
+            return action
+
         try:
-            if self.dry_run:
+            if self.SAFE_MODE:
                 action["message"] = f"[DRY-RUN] Would quarantine: {path}"
                 action["success"] = True
             else:
                 basename = os.path.basename(path)
+                # Truncate basename to avoid Windows MAX_PATH (260 chars) limit
+                max_name_len = 80
+                if len(basename) > max_name_len:
+                    ext = os.path.splitext(basename)[1][:10]
+                    basename = basename[:max_name_len - len(ext)] + ext
                 ts = datetime.now().strftime("%Y%m%d_%H%M%S")
                 dest = os.path.join(QUARANTINE_DIR, f"{ts}_{basename}")
                 shutil.move(path, dest)
-                action["message"] = f"File quarantined: {path} → {dest}"
+                action["message"] = f"File quarantined: {path} -> {dest}"
                 action["success"] = True
-                logger.warning(f"🔒 QUARANTINED: {path} → {dest}")
+                logger.warning(f"[ACTION] File moved to quarantine: {path}")
         except Exception as e:
             action["message"] = f"Quarantine failed: {e}"
             action["success"] = False
@@ -105,9 +121,9 @@ class ResponseEngine:
             "dry_run": self.dry_run
         }
 
-        # Safety guard
-        if name in PROTECTED_PROCESSES or any(p in name for p in PROTECTED_PROCESSES):
-            action["message"] = f"Process '{name}' is protected - termination refused"
+        # Safety guard constraints via Policy Engine
+        if name in PROTECTED_PROCESSES or not self.policy.evaluate_action_safety("terminate_process", name):
+            action["message"] = f"Process '{name}' is protected by Policy ACL - termination refused"
             action["success"] = False
             return action
 
@@ -116,16 +132,16 @@ class ResponseEngine:
             return action
 
         try:
-            if self.dry_run:
+            if self.SAFE_MODE:
                 action["message"] = f"[DRY-RUN] Would terminate PID {pid} ({name})"
                 action["success"] = True
             elif PSUTIL_OK:
                 proc = psutil.Process(pid)
                 proc.terminate()
                 proc.wait(timeout=3)
-                action["message"] = f"Process terminated: PID {pid} ({name})"
+                action["message"] = f"Process terminated safely: PID {pid} ({name})"
                 action["success"] = True
-                logger.warning(f"💀 TERMINATED: PID={pid} name={name}")
+                logger.warning(f"[ACTION] Terminated process PID={pid} ({name})")
             else:
                 action["message"] = "psutil not available for process termination"
         except psutil.NoSuchProcess:
@@ -155,8 +171,14 @@ class ResponseEngine:
             action["message"] = "No IP or port to block"
             return action
 
+        if not self.policy.evaluate_action_safety("block_ip", ip):
+            action["message"] = f"Policy Engine rejected firewall block for IP: {ip}"
+            action["success"] = False
+            return action
+            return action
+
         try:
-            if self.dry_run:
+            if self.SAFE_MODE:
                 action["message"] = f"[DRY-RUN] Would block IP={ip} Port={port}"
                 action["success"] = True
             else:
@@ -169,7 +191,7 @@ class ResponseEngine:
                     subprocess.run(cmd, check=True, capture_output=True, timeout=10)
                     action["message"] = f"Blocked IP {ip} via Windows Firewall"
                     action["success"] = True
-                    logger.warning(f"🚫 BLOCKED IP: {ip}")
+                    logger.warning(f"[ACTION] Blocked IP {ip}")
                 elif sys_platform == "Linux" and ip:
                     subprocess.run(["iptables", "-I", "INPUT", "-s", ip, "-j", "DROP"],
                                    check=True, capture_output=True, timeout=10)
@@ -192,7 +214,7 @@ class ResponseEngine:
             "timestamp": datetime.now().isoformat(),
             "success": True,
             "message": f"Threat logged for review: {threat.get('reason', 'Unknown')}",
-            "dry_run": self.dry_run
+            "dry_run": self.SAFE_MODE
         }
         self._log_action(action)
         return action

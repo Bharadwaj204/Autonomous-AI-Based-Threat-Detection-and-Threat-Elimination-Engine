@@ -73,9 +73,10 @@ class FileMonitor:
     def _scan(self):
         try:
             for root, dirs, files in os.walk(self.watch_dir):
-                # Skip hidden dirs and known safe dirs
+                # Skip hidden dirs, safe dirs, and internal data dirs
                 dirs[:] = [d for d in dirs if not d.startswith(".") and d not in
-                           {"node_modules", "__pycache__", ".git", "venv", ".venv"}]
+                           {"node_modules", "__pycache__", ".git", "venv", ".venv",
+                            "data", "datasets", "models", "reports"}]
                 for fname in files[:50]:  # Limit files per scan
                     fpath = os.path.join(root, fname)
                     self._check_file(fpath)
@@ -147,7 +148,8 @@ class FileMonitor:
             count = 0
             for root, dirs, files in os.walk(self.watch_dir):
                 dirs[:] = [d for d in dirs if not d.startswith(".") and
-                           d not in {"node_modules", "__pycache__", ".git"}]
+                           d not in {"node_modules", "__pycache__", ".git",
+                                     "data", "datasets", "models", "reports"}]
                 for fname in files[:5]:
                     try:
                         fpath = os.path.join(root, fname)

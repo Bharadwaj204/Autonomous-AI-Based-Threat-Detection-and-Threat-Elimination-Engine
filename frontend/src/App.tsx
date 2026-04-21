@@ -67,8 +67,8 @@ interface ForensicEntry {
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const WS_URL = 'ws://localhost:8000/ws';
-const API = 'http://localhost:8000';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const WS_URL = API.replace(/^http/, 'ws') + '/ws';
 const MAX_PTS = 40;
 
 type Tab = 'dashboard' | 'threats' | 'intel' | 'forensics' | 'demo';

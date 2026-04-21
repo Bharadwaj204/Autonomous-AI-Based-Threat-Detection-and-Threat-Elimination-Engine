@@ -3,26 +3,26 @@ version: '3.8'
 services:
   backend:
     build: 
-      context: ./threat decetion/backend
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./threat decetion/backend:/app
-    environment:
-      - WATCH_DIRECTORY=/app
-    # Note: Network monitoring requires elevated privileges
-    # privileged: true
-    # network_mode: "host"
+      context: ./backend
+    dockerfile: Dockerfile
+  ports:
+    - "8000:8000"
+  volumes:
+    - ./backend:/app
+  environment:
+    - WATCH_DIRECTORY=/app
+  # Note: Network monitoring requires elevated privileges
+  # privileged: true
+  # network_mode: "host"
 
-  frontend:
-    build:
-      context: ./threat decetion/frontend
-      dockerfile: Dockerfile
-    ports:
-      - "5173:5173"
-    environment:
-      - WDS_SOCKET_PORT=0
-    volumes:
-      - ./threat decetion/frontend:/app
+frontend:
+  build:
+    context: ./frontend
+    dockerfile: Dockerfile
+  ports:
+    - "5173:5173"
+  environment:
+    - WDS_SOCKET_PORT=0
+  volumes:
+    - ./frontend:/app
       - /app/node_modules

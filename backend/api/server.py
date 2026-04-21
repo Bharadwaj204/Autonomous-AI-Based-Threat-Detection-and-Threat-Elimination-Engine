@@ -15,7 +15,7 @@ Integrates all 10 autonomous security modules:
 import os
 import json
 import asyncio
-import logging
+import sys
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
@@ -23,17 +23,10 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from core.logging import setup_logger
+
 # ── Configure logging ────────────────────────────────────────────────────────
-os.makedirs("data/logs", exist_ok=True)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-    handlers=[
-        logging.FileHandler("data/logs/sentinel.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger("sentinel")
+logger = setup_logger("sentinel")
 
 # ── Import modules ───────────────────────────────────────────────────────────
 from monitoring.file_monitor import FileMonitor
@@ -50,8 +43,8 @@ from ml.simulator import DemoEngine
 file_monitor    = FileMonitor(watch_dir=".", entropy_threshold=7.0)
 network_monitor = NetworkMonitor()
 process_monitor = ProcessMonitor(cpu_threshold=85.0, mem_threshold=80.0)
-ai_engine       = AIDetectionEngine(model_dir="models")
-response_engine = ResponseEngine(dry_run=False)
+ai_engine       = AIDetectionEngine()
+response_engine = ResponseEngine(safe_mode=True)
 threat_db       = ThreatDatabase()
 learning        = LearningPipeline()
 forensics       = ForensicLogger()
@@ -132,7 +125,7 @@ def add_event(event_type: str, message: str,
 
 # ── Monitoring Loop ───────────────────────────────────────────────────────────
 async def monitoring_loop():
-    logger.info("🚀 Monitoring loop started")
+    logger.info("[START] Monitoring loop started")
     forensics.log("system", {"message": "Autonomous AI Based Threat Detection and Threat Elimination Engine started"}, "info")
     add_event("system", "Autonomous AI Based Threat Detection and Threat Elimination Engine started — all modules online", "info")
 
@@ -185,6 +178,20 @@ async def monitoring_loop():
             if detection["is_threat"]:
                 await _handle_detection(detection, metrics)
 
+            # Print continuous AI metrics to console cleanly
+            if tick % 2 == 0:
+                ml = detection.get("ml_metrics", {})
+                rf_conf = ml.get("rf_confidence", 0.0)
+                iso_score = ml.get("iso_score", 0.0)
+                tag = "[THREAT]" if detection["is_threat"] else "[SAFE]"
+                logger.info(
+                    f"{tag} CPU:{metrics['cpu_usage']:>4.1f}% | "
+                    f"RAM:{metrics['memory_usage']:>4.1f}% | "
+                    f"Net:{metrics['packet_rate']:>4.0f}/s | "
+                    f"ML_Conf:{rf_conf:>6.1%} | "
+                    f"Anomaly:{iso_score:>6.2f}"
+                )
+
             # ── Continuous learning: add normal/threat samples ──────────
             learning.add_sample(metrics, 1 if detection["is_threat"] else 0)
 
@@ -209,9 +216,17 @@ async def monitoring_loop():
 async def _handle_alert(alert: Dict, metrics: Dict):
     """Process an alert from any sensor."""
     state.threat_count += 1
+    
+    # Output cleanly as requested
+    conf = alert.get("confidence", 0.8)
+    reason = alert.get("reason", "Unknown alert")
+    
+    logger.info(f"Threat detected (confidence={conf:.2f})")
+    print(f"[REASON] Monitor Alert: {reason}")
+    
     evt = add_event(
         alert.get("type", "alert"),
-        alert.get("reason", "Unknown alert"),
+        reason,
         alert.get("severity", "warning"),
         alert
     )
@@ -222,12 +237,14 @@ async def _handle_alert(alert: Dict, metrics: Dict):
     threat_id = threat_db.record_threat({
         **alert,
         "method": "sensor",
-        "confidence": 0.8,
+        "confidence": conf,
         "features": metrics
     })
 
     # Auto-respond
     resp = response_engine.handle_threat(alert)
+    if resp.get("message") and "[ACTION]" not in resp.get("message"):
+        print(f"[ACTION] {resp['message']}")
     threat_db.record_action(threat_id, resp)
     threat_db.mark_mitigated(threat_id)
     resp_evt = add_event("action_taken", resp["message"], "info", resp)
@@ -238,6 +255,14 @@ async def _handle_alert(alert: Dict, metrics: Dict):
 async def _handle_detection(detection: Dict, metrics: Dict):
     """Process an AI detection result."""
     state.threat_count += 1
+    
+    # Format Explainability Output
+    conf = detection.get("confidence", 0.0)
+    explainability = detection.get("explainability", detection.get("reason", "Unknown abnormal AI behavior"))
+    
+    logger.info(f"Threat detected (confidence={conf:.2f})")
+    print(f"[REASON] {explainability}")
+
     evt = add_event(
         "ml_threat",
         detection["reason"],
@@ -251,12 +276,16 @@ async def _handle_detection(detection: Dict, metrics: Dict):
         "type": "ml_detection",
         "severity": detection["severity"],
         "method": detection["method"],
-        "confidence": detection["confidence"],
+        "confidence": conf,
         "reason": detection["reason"],
         "features": metrics
     })
 
-    resp = response_engine._log_only(detection)
+    # Instead of logging only, actually attempt to enforce global policies 
+    # (Since global AI doesn't have a specific PID, the response engine will log it or quarantine highly anomalous state files tracked by the monitor)
+    resp = response_engine.handle_threat(detection)
+    if resp.get("message") and "[ACTION]" not in resp.get("message"):
+        print(f"[ACTION] {resp['message']}")
     threat_db.record_action(threat_id, resp)
 
 
@@ -459,10 +488,12 @@ async def websocket_endpoint(ws: WebSocket):
     try:
         await ws.send_text(json.dumps({
             "type": "init",
+            "status": "online",
             "data": {
                 "events": state.events[:50],
                 "monitors": state.monitors,
-                "threat_count": state.threat_count
+                "threat_count": state.threat_count,
+                "status": "online"
             }
         }, default=str))
         while True:

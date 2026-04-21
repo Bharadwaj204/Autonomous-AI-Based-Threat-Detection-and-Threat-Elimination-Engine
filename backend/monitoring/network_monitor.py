@@ -69,7 +69,12 @@ class NetworkMonitor:
     def _snapshot(self) -> Dict:
         """Capture current network state."""
         try:
-            conns = psutil.net_connections(kind="inet")
+            try:
+                conns = psutil.net_connections(kind="inet")
+            except (psutil.AccessDenied, PermissionError):
+                # On Windows without admin rights, fall back to an empty list
+                logger.debug("net_connections() requires elevated privileges; skipping.")
+                conns = []
             io = psutil.net_io_counters()
 
             # Compute packet rate and bandwidth

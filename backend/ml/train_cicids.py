@@ -12,6 +12,9 @@ import sys
 import numpy as np
 import pandas as pd
 from datetime import datetime
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
 
 try:
     from sklearn.ensemble import RandomForestClassifier, IsolationForest
@@ -27,18 +30,20 @@ except ImportError:
     sys.exit(1)
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
-BACKEND_DIR = os.path.join(BASE_DIR, '..')
-DATA_CSV    = os.path.join(BACKEND_DIR, 'data', 'processed_cicids_training_data.csv')
-MODEL_DIR   = os.path.join(BACKEND_DIR, 'models')
-REPORT_DIR  = os.path.join(BACKEND_DIR, 'reports')
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+BACKEND_DIR = BASE_DIR.parent
+DATA_CSV = BACKEND_DIR / "data" / "processed_cicids_training_data.csv"
+MODEL_DIR = BACKEND_DIR / "models"
+REPORT_DIR = BACKEND_DIR / "reports"
 
 FEATURE_COLS = ['cpu_usage', 'memory_usage', 'entropy',
                 'packet_rate', 'bytes_per_sec', 'connection_count']
 LABEL_COL    = 'is_threat'
 
-os.makedirs(MODEL_DIR,  exist_ok=True)
-os.makedirs(REPORT_DIR, exist_ok=True)
+MODEL_DIR.mkdir(parents=True, exist_ok=True)
+REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def train_and_evaluate():
@@ -62,8 +67,8 @@ def train_and_evaluate():
     print(f"    BENIGN  (0): {(df[LABEL_COL]==0).sum():,}")
     print(f"    ATTACK  (1): {(df[LABEL_COL]==1).sum():,}")
 
-    X = df[FEATURE_COLS].values
-    y = df[LABEL_COL].values
+    X = df[FEATURE_COLS]
+    y = df[LABEL_COL]
 
     # ── Train/Test Split ──────────────────────────────────────────────────────
     print("\n[2/6] Splitting: 80% train / 20% test")
@@ -75,8 +80,12 @@ def train_and_evaluate():
     # ── Feature Scaling ───────────────────────────────────────────────────────
     print("\n[3/6] Fitting StandardScaler …")
     scaler = StandardScaler()
-    X_train_s = scaler.fit_transform(X_train)
-    X_test_s  = scaler.transform(X_test)
+    
+    # Maintain DataFrame structure to fix sklearn warning explicitly
+    X_train_s_arr = scaler.fit_transform(X_train)
+    X_test_s_arr  = scaler.transform(X_test)
+    X_train_s = pd.DataFrame(X_train_s_arr, columns=FEATURE_COLS)
+    X_test_s  = pd.DataFrame(X_test_s_arr, columns=FEATURE_COLS)
 
     # ── Train RandomForest ────────────────────────────────────────────────────
     print("\n[4/6] Training RandomForestClassifier (100 trees) …")
@@ -178,7 +187,7 @@ weighted avg       0.92      0.92      0.92     40000"""
     # ── Sample predictions  ───────────────────────────────────────────────────
     print("\n  Sample predictions (first 5 test rows):")
     feature_sample = pd.DataFrame(X_test[:5], columns=FEATURE_COLS)
-    true_labels    = y_test[:5]
+    true_labels    = y_test[:5].values
     preds          = rf.predict(X_test_s[:5])
     probas         = rf.predict_proba(X_test_s[:5])[:,1]
     for i in range(5):
@@ -194,14 +203,14 @@ weighted avg       0.92      0.92      0.92     40000"""
     print("  ✅ Feature vector order matches detection_engine.py")
 
     # ── Save models ───────────────────────────────────────────────────────────
-    rf_path     = os.path.join(MODEL_DIR, 'randomforest_model.pkl')
-    iso_path    = os.path.join(MODEL_DIR, 'isoforest_model.pkl')
-    scaler_path = os.path.join(MODEL_DIR, 'scaler.pkl')
+    rf_path     = MODEL_DIR / 'randomforest_model.pkl'
+    iso_path    = MODEL_DIR / 'isoforest_model.pkl'
+    scaler_path = MODEL_DIR / 'scaler.pkl'
 
     with open(rf_path,     'wb') as f: pickle.dump(rf, f)
     with open(iso_path,    'wb') as f: pickle.dump(iso, f)
     with open(scaler_path, 'wb') as f: pickle.dump(scaler, f)
-    print(f"\n  ✅ Models saved:")
+    print(f"\n  [OK] Models saved:")
     print(f"     {rf_path}")
     print(f"     {iso_path}")
     print(f"     {scaler_path}")
