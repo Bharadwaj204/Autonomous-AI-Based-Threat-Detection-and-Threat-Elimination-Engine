@@ -2,10 +2,21 @@
 
 <div align="center">
   <img src="https://img.shields.io/badge/Status-Production%20Ready-success" />
+  <img src="https://img.shields.io/badge/Deployed_On-Render-black?logo=render" />
   <img src="https://img.shields.io/badge/Python-3.10%2B-blue" />
   <img src="https://img.shields.io/badge/Framework-FastAPI%20%7C%20React-blueviolet" />
   <img src="https://img.shields.io/badge/ML-Scikit--Learn-orange" />
 </div>
+
+## 🌐 Live Deployment
+
+🚀 **Experience the live dashboard right now:**
+- **Frontend Dashboard:** [https://threat-sentinel-frontend.onrender.com](https://threat-sentinel-frontend.onrender.com/)
+- **Backend Health API:** [https://threat-sentinel-backend.onrender.com/health](https://threat-sentinel-backend.onrender.com/health)
+
+> *⚠️ Note: This project is deployed on Render's free tier infrastructure. If the dashboard hasn't been visited in a while, the backend server may take about ~50 seconds to manually spin up before the charts start streaming data natively!*
+
+---
 
 ## 📖 Project Overview
 **Threat Sentinel** is a production-grade, autonomous Endpoint Detection and Response (EDR) system. Built for modern cybersecurity challenges, it actively monitors host operating system metrics—including process behavior, network socket aggregations, and file system entropy—in real-time.
