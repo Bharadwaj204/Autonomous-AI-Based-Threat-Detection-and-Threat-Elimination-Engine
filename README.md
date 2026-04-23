@@ -12,7 +12,7 @@
 
 🚀 **Experience the live dashboard right now:**
 - **Frontend Dashboard:** [https://threat-sentinel-frontend.onrender.com](https://threat-sentinel-frontend.onrender.com/)
-- **Backend Health API:** [https://threat-sentinel-backend.onrender.com/health](https://threat-sentinel-backend.onrender.com/health)
+- **Backend Health API:** [https://threat-sentinel-backend.onrender.com/health](https://threat-sentinel-backend.onrender.com/)
 
 > *⚠️ Note: This project is deployed on Render's free tier infrastructure. If the dashboard hasn't been visited in a while, the backend server may take about ~50 seconds to manually spin up before the charts start streaming data natively!*
 
